@@ -82,14 +82,14 @@ Once imported, start typing a CLI for Microsoft 365 cmdlet (e.g. `m365 spo app`)
 
 ## Changing predictions search method
 
-By default the module uses `StartsWith` search i.e. it shows predictions that starts with the input entered. This can be changed to `Contains` by using the following cmdlet
+By default the module uses `Contains` search i.e. it shows predictions that starts with the input entered. This can be changed to `StartsWith` by using the following cmdlet
 
 ```powershell
-Set-PnPPredictorSearch -Method Contains
+Set-PnPPredictorSearch -Method StartsWith
 ```
 The module then needs to re-imported.
 
-`Contains` - as per the name shows predictions that contain the entered input.
+`StartsWith` - as per the name shows predictions that start with the entered input.
 
 ## Updating predictions
 

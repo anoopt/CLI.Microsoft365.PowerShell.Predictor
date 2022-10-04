@@ -13,7 +13,7 @@ internal class Settings
         
         if (cliM365PredictorCommandSearchMethod == null)
         {
-            return CommandSearchMethod.StartsWith;
+            return CommandSearchMethod.Contains;
         }
 
         switch (cliM365PredictorCommandSearchMethod)

@@ -26,6 +26,9 @@ namespace CLI.Microsoft365.PowerShell.Predictor.Services
             string fileName = Path.Combine($"{executableLocation}{CLIMicrosoft365PowerShellPredictorConstants.SuggestionsFileRelativePath}", _commandsFileName);
             string jsonString = await File.ReadAllTextAsync(fileName);
             _allPredictiveSuggestions = JsonSerializer.Deserialize<List<Suggestion>>(jsonString)!;
+            
+            //filter out the suggestions where Command is not null or empty
+            _allPredictiveSuggestions = _allPredictiveSuggestions.Where(s => !string.IsNullOrEmpty(s.Command)).ToList();
         }
 
         protected virtual void RequestAllPredictiveCommands(bool showWarning)
