@@ -76,9 +76,9 @@ To import the CLI for Microsoft 365 PowerShell Predictor module in the current s
 Import-Module -Name CLI.Microsoft365.PowerShell.Predictor
 ```
 
-### Use M365 CLI PowerShell Predictor
+### Use CLI for Microsoft365 PowerShell Predictor
 
-Once imported, start typing M365 CLI cmdlet (e.g. `m365 spo app`) and see the predictions loading.
+Once imported, start typing a CLI for Microsoft 365 cmdlet (e.g. `m365 spo app`) and see the predictions loading.
 
 ## Changing predictions search method
 
@@ -96,7 +96,7 @@ The module then needs to re-imported.
 The predictions are based on the CLI for Microsoft 365 version installed on the machine. When a new version of CLI for Microsoft 365 is installed then the predictions are automatically updated when the module is imported or can be updated by running the following function
 
 ```powershell
-Update-M365CLIPredictions $(m365 version).replace('v', '').replace('"', '')
+Update-CLIMircosoft365Predictions $(m365 version).replace('v', '').replace('"', '')
 ```
 ## Uninstallation
 
