@@ -22,8 +22,10 @@ internal class Settings
                 return CommandSearchMethod.Contains;
             case "StartsWith":
                 return CommandSearchMethod.StartsWith;
+            case "Fuzzy":
+                return CommandSearchMethod.Fuzzy;
             default:
-                return CommandSearchMethod.StartsWith;
+                return CommandSearchMethod.Contains;
         }
     }
     

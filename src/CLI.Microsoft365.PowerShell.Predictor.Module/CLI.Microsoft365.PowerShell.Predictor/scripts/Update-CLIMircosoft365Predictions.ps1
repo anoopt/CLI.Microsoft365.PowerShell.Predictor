@@ -18,15 +18,19 @@ function Update-CLIMircosoft365Predictions {
             # get all cli for Microsoft 365 docs from the m365 cli docs folder
             $m365cliDocsPath = Join-Path $(npm root -g) -ChildPath "@pnp\cli-microsoft365\docs\docs\cmd";
             $files = Get-ChildItem -Path $m365cliDocsPath -Filter "*.md" -Recurse;
+
+            # create a regex pattern to match the example code
+            $pattern = "(?<=``````sh)(.*?)(?=``````)"
+            
+            # set id to 1
+            $id = 1;
     
             # loop through each file
             $files | ForEach-Object {
         
                 # get the file data
                 $fileData = Get-Content $_.FullName;
-                # create a regex pattern to match the example code
-                $pattern = "(?<=``````sh)(.*?)(?=``````)"
-    
+                
                 $result = [regex]::Matches($fileData, $pattern);
     
                 $i = 1;
@@ -38,11 +42,18 @@ function Update-CLIMircosoft365Predictions {
                     if ($value -match "\[options\]") {
                         continue;
                     }
+
+                    # extract everything before --
+                    $commandName = $value.Split("--")[0].Trim();
+                    
                     $json += @{
+                        "CommandName" = $commandName
                         "Command" = $value
                         "Rank"    = $i
+                        "Id"      = $id
                     }
                     $i++;
+                    $id++;
                 }
             }
 

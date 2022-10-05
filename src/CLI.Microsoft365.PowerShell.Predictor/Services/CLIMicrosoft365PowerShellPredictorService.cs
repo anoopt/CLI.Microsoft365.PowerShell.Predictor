@@ -2,11 +2,14 @@
 using CLI.Microsoft365.PowerShell.Predictor.Abstractions.Models;
 using System.Management.Automation.Subsystem.Prediction;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using CLI.Microsoft365.PowerShell.Predictor.Utilities;
 
 namespace CLI.Microsoft365.PowerShell.Predictor.Services
 {
-    internal class CLIMicrosoft365PowerShellPredictorService : ICLIMicrosoft365PowerShellPredictorService
+    internal sealed class CLIMicrosoft365PowerShellPredictorService : ICLIMicrosoft365PowerShellPredictorService
     {
         private List<Suggestion>? _allPredictiveSuggestions;
         private readonly CommandSearchMethod _commandSearchMethod;
@@ -19,6 +22,18 @@ namespace CLI.Microsoft365.PowerShell.Predictor.Services
             _commandSearchMethod = settings.CommandSearchMethod;
             RequestAllPredictiveCommands(settings.ShowWarning);
         }
+        
+        private void RemoveInvalidSuggestions()
+        {
+            //if _allPredictiveSuggestions is null, then return
+            if (_allPredictiveSuggestions == null)
+            {
+                return;
+            }
+            
+            //filter out suggestions where CommandName and Command are not null or empty
+            _allPredictiveSuggestions = _allPredictiveSuggestions.Where(suggestion => !string.IsNullOrEmpty(suggestion.CommandName) && !string.IsNullOrEmpty(suggestion.Command)).ToList();
+        }
 
         private async Task SetPredictiveSuggestions()
         {
@@ -27,11 +42,10 @@ namespace CLI.Microsoft365.PowerShell.Predictor.Services
             string jsonString = await File.ReadAllTextAsync(fileName);
             _allPredictiveSuggestions = JsonSerializer.Deserialize<List<Suggestion>>(jsonString)!;
             
-            //filter out the suggestions where Command is not null or empty
-            _allPredictiveSuggestions = _allPredictiveSuggestions.Where(s => !string.IsNullOrEmpty(s.Command)).ToList();
+            RemoveInvalidSuggestions();
         }
 
-        protected virtual void RequestAllPredictiveCommands(bool showWarning)
+        private void RequestAllPredictiveCommands(bool showWarning)
         {
             //TODO: Decide if we need to make an http request here to get all the commands
             //TODO: if the http request fails then fallback to local JSON file?
@@ -71,8 +85,53 @@ namespace CLI.Microsoft365.PowerShell.Predictor.Services
                 }
             });
         }
+        
+        private IEnumerable<Suggestion>? GetFilteredSuggestions(string input)
+        {
+            IEnumerable<Suggestion>? filteredSuggestions = null;
+            
+            #region Search
 
-        public virtual List<PredictiveSuggestion>? GetSuggestions(PredictionContext context)
+            switch (_commandSearchMethod)
+            {
+                default:
+                case CommandSearchMethod.Contains:
+                    filteredSuggestions = _allPredictiveSuggestions
+                        ?.Where(pc => pc.CommandName != null && pc.CommandName.ToLower().Contains(input.ToLower()))
+                        .OrderBy(pc => pc.Rank);
+                    break;
+                
+                case CommandSearchMethod.StartsWith:
+                    filteredSuggestions = _allPredictiveSuggestions
+                        ?.Where(pc => pc.CommandName != null && pc.CommandName.ToLower().StartsWith(input.ToLower()))
+                        .OrderBy(pc => pc.Rank);
+                    break;
+                
+                //TODO: Might need improvements
+                case CommandSearchMethod.Fuzzy:
+                {
+                    var inputWithoutSpaces = Regex.Replace(input, @"\s+", "");
+                    
+                    var matches = new List<Suggestion>();
+
+                    foreach (var suggestion in CollectionsMarshal.AsSpan(_allPredictiveSuggestions))
+                    {
+                        FuzzyMatcher.Match(suggestion.CommandName, inputWithoutSpaces, out var score);
+                        suggestion.Rank = score;
+                        matches.Add(suggestion);
+                    }
+
+                    filteredSuggestions = matches.OrderByDescending(m => m.Rank);
+                    break;
+                }   
+            }
+
+            #endregion
+            
+            return filteredSuggestions;
+        }
+
+        public List<PredictiveSuggestion>? GetSuggestions(PredictionContext context)
         {
             var input = context.InputAst.Extent.Text;
             if (string.IsNullOrWhiteSpace(input))
@@ -85,16 +144,7 @@ namespace CLI.Microsoft365.PowerShell.Predictor.Services
                 return null;
             }
 
-            IEnumerable<Suggestion>? filteredSuggestions = _commandSearchMethod switch
-            {
-                CommandSearchMethod.StartsWith => _allPredictiveSuggestions
-                    ?.Where(pc => pc.Command != null && pc.Command.ToLower().StartsWith(input.ToLower()))
-                    .OrderBy(pc => pc.Rank),
-                CommandSearchMethod.Contains => _allPredictiveSuggestions
-                    ?.Where(pc => pc.Command != null && pc.Command.ToLower().Contains(input.ToLower()))
-                    .OrderBy(pc => pc.Rank),
-                _ => null
-            };
+            IEnumerable<Suggestion>? filteredSuggestions = GetFilteredSuggestions(input);
 
             var result = filteredSuggestions?.Select(fs => new PredictiveSuggestion(fs.Command)).ToList();
 
